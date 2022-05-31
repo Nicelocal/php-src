@@ -354,15 +354,6 @@ ZEND_COLD void zend_debug_alloc_output(char *format, ...)
 }
 #endif
 
-ZEND_API void zend_mm_check_corruption(void) {
-	for (int i = 0; i < ZEND_MM_BINS; i++) {
-		zend_mm_free_slot *p = AG(mm_heap)->free_slot[i];
-		while (p != NULL) {
-			p = p->next_free_slot;
-		}
-	}
-}
-
 static ZEND_COLD ZEND_NORETURN void zend_mm_panic(const char *message)
 {
 	fprintf(stderr, "%s\n", message);
@@ -2380,6 +2371,15 @@ static size_t alloc_globals_offset;
 # define AG(v) (alloc_globals.v)
 static zend_alloc_globals alloc_globals;
 #endif
+
+ZEND_API void zend_mm_check_corruption(void) {
+	for (int i = 0; i < ZEND_MM_BINS; i++) {
+		zend_mm_free_slot *p = AG(mm_heap)->free_slot[i];
+		while (p != NULL) {
+			p = p->next_free_slot;
+		}
+	}
+}
 
 ZEND_API bool is_zend_mm(void)
 {
