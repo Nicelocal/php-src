@@ -354,6 +354,15 @@ ZEND_COLD void zend_debug_alloc_output(char *format, ...)
 }
 #endif
 
+ZEND_API void zend_mm_check_corruption(void) {
+	for (int i = 0; i < ZEND_MM_BINS; i++) {
+		zend_mm_free_slot *p = AG(mm_heap)->free_slot[i];
+		while (p != NULL) {
+			p = p->next_free_slot;
+		}
+	}
+}
+
 static ZEND_COLD ZEND_NORETURN void zend_mm_panic(const char *message)
 {
 	fprintf(stderr, "%s\n", message);
@@ -1027,6 +1036,7 @@ found:
 
 static zend_always_inline void *zend_mm_alloc_large_ex(zend_mm_heap *heap, size_t size ZEND_FILE_LINE_DC ZEND_FILE_LINE_ORIG_DC)
 {
+	zend_mm_check_corruption();
 	int pages_count = (int)ZEND_MM_SIZE_TO_NUM(size, ZEND_MM_PAGE_SIZE);
 #if ZEND_DEBUG
 	void *ptr = zend_mm_alloc_pages(heap, pages_count, size ZEND_FILE_LINE_RELAY_CC ZEND_FILE_LINE_ORIG_RELAY_CC);
@@ -1186,6 +1196,7 @@ static zend_always_inline int zend_mm_small_size_to_bin(size_t size)
 
 static zend_never_inline void *zend_mm_alloc_small_slow(zend_mm_heap *heap, uint32_t bin_num ZEND_FILE_LINE_DC ZEND_FILE_LINE_ORIG_DC)
 {
+	zend_mm_check_corruption();
 	zend_mm_chunk *chunk;
 	int page_num;
 	zend_mm_bin *bin;
@@ -1251,6 +1262,7 @@ static zend_always_inline void *zend_mm_alloc_small(zend_mm_heap *heap, int bin_
 	} while (0);
 #endif
 
+	zend_mm_check_corruption();
 	if (EXPECTED(heap->free_slot[bin_num] != NULL)) {
 		zend_mm_free_slot *p = heap->free_slot[bin_num];
 		heap->free_slot[bin_num] = p->next_free_slot;
@@ -1310,6 +1322,7 @@ static zend_always_inline zend_mm_debug_info *zend_mm_get_debug_info(zend_mm_hea
 
 static zend_always_inline void *zend_mm_alloc_heap(zend_mm_heap *heap, size_t size ZEND_FILE_LINE_DC ZEND_FILE_LINE_ORIG_DC)
 {
+	zend_mm_check_corruption();
 	void *ptr;
 #if ZEND_DEBUG
 	size_t real_size = size;
@@ -1750,6 +1763,8 @@ static void zend_mm_change_huge_block_size(zend_mm_heap *heap, void *ptr, size_t
 
 static void *zend_mm_alloc_huge(zend_mm_heap *heap, size_t size ZEND_FILE_LINE_DC ZEND_FILE_LINE_ORIG_DC)
 {
+
+	zend_mm_check_corruption();
 #ifdef ZEND_WIN32
 	/* On Windows we don't have ability to extend huge blocks in-place.
 	 * We allocate them with 2MB size granularity, to avoid many
