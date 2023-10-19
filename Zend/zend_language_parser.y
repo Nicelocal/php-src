@@ -271,7 +271,7 @@ static YYSIZE_T zend_yytnamerr(char*, const char*);
 %type <ast> ctor_arguments alt_if_stmt_without_else trait_adaptation_list lexical_vars
 %type <ast> lexical_var_list encaps_list
 %type <ast> array_pair non_empty_array_pair_list array_pair_list possible_array_pair
-%type <ast> isset_variable type return_type type_expr type_without_static
+%type <ast> isset_variable type return_type type_expr type_without_static type_without_static_without_generics generic_type_without_static generic_type_without_static_args
 %type <ast> identifier type_expr_without_static union_type_without_static_element union_type_without_static intersection_type_without_static
 %type <ast> inline_function union_type_element union_type intersection_type
 %type <ast> attributed_statement attributed_class_statement attributed_parameter
@@ -856,10 +856,15 @@ type_expr_without_static:
 	|	intersection_type_without_static	{ $$ = $1; }
 ;
 
-type_without_static:
+type_without_static_without_generics:
 		T_ARRAY		{ $$ = zend_ast_create_ex(ZEND_AST_TYPE, IS_ARRAY); }
 	|	T_CALLABLE	{ $$ = zend_ast_create_ex(ZEND_AST_TYPE, IS_CALLABLE); }
 	|	name		{ $$ = $1; }
+;
+
+type_without_static:
+		type_without_static_without_generics	{ $$ = $1; }
+	|	generic_type_without_static				{ $$ = $1; }
 ;
 
 union_type_without_static_element:
@@ -880,6 +885,21 @@ intersection_type_without_static:
 	|	intersection_type_without_static T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG type_without_static
 			{ $$ = zend_ast_list_add($1, $3); }
 ;
+
+generic_type_without_static_args:
+		type_without_static ',' type_without_static
+			{ $$ = zend_ast_create_list(2, ZEND_AST_TYPE_GENERIC_ARGS, $1, $3); }
+	|	generic_type_without_static_args ',' type_without_static
+			{ $$ = zend_ast_list_add($1, $3); }
+;
+
+generic_type_without_static:
+		type_without_static_without_generics '<' generic_type_without_static_args '>'
+			{ $$ = zend_ast_create_list(2, ZEND_AST_TYPE_GENERIC, $1, $3); }
+	|	type_without_static_without_generics '<' type_without_static '>'
+			{ $$ = zend_ast_create_list(2, ZEND_AST_TYPE_GENERIC, $1, zend_ast_create_list(1, ZEND_AST_TYPE_GENERIC_ARGS, $3)); }
+;
+
 
 return_type:
 		%empty	{ $$ = NULL; }

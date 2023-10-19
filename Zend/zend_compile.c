@@ -6752,6 +6752,30 @@ static zend_type zend_compile_typename_ex(
 			ZEND_TYPE_FULL_MASK(type) |= _ZEND_TYPE_INTERSECTION_BIT;
 			ZEND_TYPE_FULL_MASK(type) |= _ZEND_TYPE_ARENA_BIT;
 		}
+	} else if (ast->kind == ZEND_AST_TYPE_GENERIC) {
+		zend_ast_list *listRoot = zend_ast_get_list(ast);		
+		zend_ast_list *list = zend_ast_get_list(listRoot->child[1]);
+
+		zend_type_list *type_list;
+
+		type_list = zend_arena_alloc(&CG(arena), ZEND_TYPE_LIST_SIZE(list->children+1));
+		type_list->num_types = 0;
+
+		type_list->types[type_list->num_types++] = zend_compile_single_typename(listRoot->child[0]);
+
+		ZEND_ASSERT(list->children > 0);
+
+		for (uint32_t i = 0; i < list->children; i++) {
+			zend_ast *type_ast = list->child[i];
+			zend_type single_type = zend_compile_typename_ex(type_ast, false, NULL);
+
+			type_list->types[type_list->num_types++] = single_type;
+		}
+
+		ZEND_TYPE_SET_LIST(type, type_list);
+		ZEND_TYPE_FULL_MASK(type) |= _ZEND_TYPE_ARENA_BIT;
+		/* Inform that the type list is a generic type */
+		ZEND_TYPE_FULL_MASK(type) |= _ZEND_TYPE_GENERIC_BIT;
 	} else {
 		type = zend_compile_single_typename(ast);
 	}

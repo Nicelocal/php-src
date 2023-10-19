@@ -1130,6 +1130,28 @@ static zend_always_inline bool zend_check_type_slow(
 			zend_type *list_type;
 			if (ZEND_TYPE_IS_INTERSECTION(*type)) {
 				return zend_check_intersection_type_from_cache_slot(ZEND_TYPE_LIST(*type), Z_OBJCE_P(arg), &cache_slot);
+			} else if (ZEND_TYPE_IS_GENERIC(*type)) {
+				zend_object *obj;
+				int idx = 0;
+				ZEND_TYPE_LIST_FOREACH(ZEND_TYPE_LIST(*type), list_type) {
+					if (idx == 0) {
+						ce = zend_fetch_ce_from_cache_slot(cache_slot, type);
+						if (!ce || !instanceof_function(Z_OBJCE_P(arg), ce)) {
+							return false;
+						}
+						obj = Z_OBJ_P(arg);
+						if (obj == NULL) {
+							return false;
+						}
+					} else {
+						if (obj->generic_params[idx-1] == NULL) {
+							return false;
+						}
+						if (zend_perform_covariant_type_check(scope, type, scope, obj->generic_params[idx-1]) != INHERITANCE_SUCCESS) {
+							return false;
+						}
+					}
+				} ZEND_TYPE_LIST_FOREACH_END();
 			} else {
 				ZEND_TYPE_LIST_FOREACH(ZEND_TYPE_LIST(*type), list_type) {
 					if (ZEND_TYPE_IS_INTERSECTION(*list_type)) {

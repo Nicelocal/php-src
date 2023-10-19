@@ -158,8 +158,10 @@ typedef struct {
 #define _ZEND_TYPE_INTERSECTION_BIT (1u << 19)
 /* Whether the type is a union type */
 #define _ZEND_TYPE_UNION_BIT (1u << 18)
+/* Whether the type is a generic type */
+#define _ZEND_TYPE_GENERIC_BIT (1u << 18)
 /* Type mask excluding the flags above. */
-#define _ZEND_TYPE_MAY_BE_MASK ((1u << 18) - 1)
+#define _ZEND_TYPE_MAY_BE_MASK ((1u << 19) - 1)
 /* Must have same value as MAY_BE_NULL */
 #define _ZEND_TYPE_NULLABLE_BIT 0x2u
 
@@ -188,6 +190,9 @@ typedef struct {
 
 #define ZEND_TYPE_IS_UNION(t) \
 	((((t).type_mask) & _ZEND_TYPE_UNION_BIT) != 0)
+
+#define ZEND_TYPE_IS_GENERIC(t) \
+	((((t).type_mask) & _ZEND_TYPE_GENERIC_BIT) != 0)
 
 #define ZEND_TYPE_USES_ARENA(t) \
 	((((t).type_mask) & _ZEND_TYPE_ARENA_BIT) != 0)
@@ -558,6 +563,7 @@ struct _zend_object {
 	uint32_t          handle; // TODO: may be removed ???
 	zend_class_entry *ce;
 	const zend_object_handlers *handlers;
+	zend_type 		 *generic_params[1];
 	HashTable        *properties;
 	zval              properties_table[1];
 };
